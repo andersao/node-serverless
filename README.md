@@ -22,7 +22,7 @@ Executar roolback
 
 
 
-# Uplaod AWS
+## Upload Lambda
 
 1. `zip -r lambda.zip -r .`
 2. `aws lambda update-function-code --function-name={FUNCTION_NAME} --zip-file=fileb://lambda.zip --profile {PROFILE}`
