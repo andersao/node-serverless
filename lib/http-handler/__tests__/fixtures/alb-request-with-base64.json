@@ -1,0 +1,27 @@
+{
+  "requestContext": {
+      "elb": {
+          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:213048282442:targetgroup/alb-lambdas/cc86f5e86dba614b"
+      }
+  },
+  "httpMethod": "POST",
+  "path": "/admin/upload",
+  "queryStringParameters": {},
+  "headers": {
+      "accept": "*/*",
+      "accept-encoding": "gzip, deflate",
+      "cache-control": "no-cache",
+      "connection": "keep-alive",
+      "content-length": "70",
+      "content-type": "image/png",
+      "host": "newton-core-dev-1421909939.us-east-1.elb.amazonaws.com",
+      "postman-token": "1a4e6635-f540-4966-ac7c-6b966971882c",
+      "user-agent": "PostmanRuntime/7.15.0",
+      "x-amzn-trace-id": "Root=1-5d4f39ff-95979359d4f1b36672b00cb9",
+      "x-forwarded-for": "191.6.8.195",
+      "x-forwarded-port": "80",
+      "x-forwarded-proto": "http"
+  },
+  "body": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==",
+  "isBase64Encoded": true
+}

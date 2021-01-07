@@ -1,0 +1,18 @@
+version: 0.2
+env:
+  variables:
+    NODE_ENV: "test"
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12
+    commands:
+      - npm install
+  build:
+    commands:
+      - npx gulp prepareCloudFormation
+artifacts:
+  files:
+    - dist/tmp/template.yaml
+    - dist/tmp/packaged.yaml
+  discard-paths: yes

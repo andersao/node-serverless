@@ -1,0 +1,27 @@
+{
+  "requestContext": {
+      "elb": {
+          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:213048282442:targetgroup/alb-lambdas/cc86f5e86dba614b"
+      }
+  },
+  "httpMethod": "GET",
+  "path": "/",
+  "queryStringParameters": {},
+  "headers": {
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+      "accept-encoding": "gzip, deflate",
+      "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+      "content-type": "application/json",
+      "cache-control": "max-age=0",
+      "connection": "keep-alive",
+      "host": "newton-core-dev-993824483.us-east-1.elb.amazonaws.com",
+      "upgrade-insecure-requests": "1",
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.87 Safari/537.36",
+      "x-amzn-trace-id": "Root=1-5d5b52eb-7c4b42f0bd4964123092fa88",
+      "x-forwarded-for": "191.6.8.246",
+      "x-forwarded-port": "80",
+      "x-forwarded-proto": "http"
+  },
+  "body": "",
+  "isBase64Encoded": false
+}

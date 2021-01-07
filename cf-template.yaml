@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Node Service Deployment
+Resources:
+  SampleNodeService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      FunctionName: SampleNodeService
+      Role: arn:aws:iam::901194531837:role/service-role/node-lambda-role
+      Runtime: nodejs12.x
+      AutoPublishAlias: live
+      MemorySize: 256
+      Timeout: 180
+      ${VPC_CONFIG}
+      Environment:
+        Variables:
+          NODE_ENV: "production"
+          APP_DEBUG: '${APP_DEBUG}'
+          APP_SECRET: '${APP_SECRET}'
+          API_PREFIX: '${API_PREFIX}'
+          DATABASE_HOST: '${DATABASE_HOST}'
+          DATABASE_USER: '${DATABASE_USER}'
+          DATABASE_PASSWORD: '${DATABASE_PASSWORD}'
+          DATABASE_NAME: '${DATABASE_NAME}'
+      DeploymentPreference:
+        Type: AllAtOnce
+        Alarms:
+          - !Ref AliasErrorMetricGreaterThanZeroAlarm
+          - !Ref LatestVersionErrorMetricGreaterThanZeroAlarm
+        Hooks:
+          PreTraffic: !Ref SampleNodeServicePreTrafficHook
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SAMPLE-*:*'
+            - Effect: Allow
+              Action:
+                - ec2:DescribeVpcs
+                - ec2:DescribeRegions
+                - ec2:DescribeInstances
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DetachNetworkInterface
+              Resource: '*'
+  SampleNodeServicePreTrafficHook:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: pre-traffic-hook.handler
+      FunctionName:  CodeDeployHook_SampleNodeService_PreTrafficHook
+      DeploymentPreference:
+        Enabled: false
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Timeout: 60
+      ${VPC_CONFIG}
+      Environment:
+        Variables:
+          NewVersion: !Ref SampleNodeService.Version
+          NODE_ENV: 'production'
+          DATABASE_HOST: '${DATABASE_HOST}'
+          DATABASE_USER: '${DATABASE_USER}'
+          DATABASE_PASSWORD: '${DATABASE_PASSWORD}'
+          DATABASE_NAME: '${DATABASE_NAME}'
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'codedeploy:PutLifecycleEventHookExecutionStatus'
+              Resource: !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*'
+            - Effect: 'Allow'
+              Action:
+                - 'lambda:InvokeFunction'
+              Resource: !Ref SampleNodeService.Version
+            - Effect: Allow
+              Action:
+                - ec2:DescribeVpcs
+                - ec2:DescribeRegions
+                - ec2:DescribeInstances
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DetachNetworkInterface
+              Resource: '*'
+  AliasErrorMetricGreaterThanZeroAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmName: SampleNodeService-AliasError
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Resource
+          Value: !Sub '${SampleNodeService}:live'
+        - Name: FunctionName
+          Value: !Ref SampleNodeService
+      EvaluationPeriods: 3
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      TreatMissingData: ignore
+      AlarmActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
+      OKActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
+      Period: 60
+      Statistic: Sum
+      Threshold: 0
+  LatestVersionErrorMetricGreaterThanZeroAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmName: SampleNodeService-LatestError
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Resource
+          Value: !Ref SampleNodeService.Version
+        - Name: FunctionName
+          Value: !Ref SampleNodeService
+      EvaluationPeriods: 3
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      TreatMissingData: ignore
+      AlarmActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
+      OKActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
+      Period: 60
+      Statistic: Sum
+      Threshold: 0
+  varejofacilAdminLambdaPermission:
+      Type: AWS::Lambda::Permission
+      DependsOn:
+        - SampleNodeService
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref SampleNodeService
+        Principal: apigateway.amazonaws.com

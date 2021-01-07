@@ -1,0 +1,66 @@
+{
+  "name": "node-alb-scaffold",
+  "version": "2.0.0",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "jest --detectOpenHandles",
+    "lint": "npx eslint .",
+    "db:migrate": "npx knex migrate:latest",
+    "db:migrate:rollback": "npx knex migrate:rollback"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/casamagalhaes/node-alb-scaffold.git"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "keywords": [
+    "node",
+    "alb",
+    "scaffold"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/casamagalhaes/node-alb-scaffold/issues"
+  },
+  "homepage": "https://github.com/casamagalhaes/node-alb-scaffold#readme",
+  "devDependencies": {
+    "@types/jest": "^24.0.23",
+    "eslint": "^6.7.1",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.2",
+    "faker": "^4.1.0",
+    "gulp": "^4.0.2",
+    "gulp-clean": "^0.4.0",
+    "gulp-install": "^1.1.0",
+    "gulp-shell": "^0.7.1",
+    "gulp-zip": "^5.0.1",
+    "husky": "^3.1.0",
+    "jest": "^24.9.0",
+    "sequelize-cli": "^5.5.1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.580.0",
+    "axios": "^0.19.0",
+    "debug": "^4.1.1",
+    "jsonwebtoken": "^8.5.1",
+    "jwk-to-pem": "^2.0.3",
+    "knex": "^0.21.2",
+    "lodash": "^4.17.15",
+    "moment": "^2.24.0",
+    "moment-timezone": "^0.5.27",
+    "mysql": "^2.18.1",
+    "mysql2": "^2.1.0",
+    "pako": "^1.0.10",
+    "umzug": "^2.3.0",
+    "uuid": "^8.3.2",
+    "validator": "^13.1.1",
+    "yup": "^0.29.1"
+  },
+  "engines": {
+    "node": ">= 12"
+  }
+}

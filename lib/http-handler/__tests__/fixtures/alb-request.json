@@ -1,0 +1,23 @@
+{
+  "requestContext": {
+    "elb": {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:213048282442:targetgroup/alb-lambdas/cc86f5e86dba614b"
+    }
+  },
+  "httpMethod": "POST",
+  "path": "/v2/fiscal/nfes/lote/emissao",
+  "queryStringParameters": {
+    "id": "bbcb3e49-b3a6-47e4-bc7d-bf4f5313ea9a"
+  },
+  "headers": {
+    "accept": "*/*",
+    "content-type": "application/json",
+    "host": "alb-example-2043100370.us-east-1.elb.amazonaws.com",
+    "x-api-key": "UGOc3L8CrXK22OC5XuYisQ==:1b2c46ca-fe64-4679-a0b6-c615e394b618",
+    "x-forwarded-for": "191.6.8.195",
+    "x-forwarded-port": "80",
+    "x-forwarded-proto": "http"
+  },
+  "body": "{\"name\":\"lorem\"}",
+  "isBase64Encoded": false
+}
