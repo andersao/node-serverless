@@ -1,6 +1,7 @@
 const PostService = require('./post-service');
 const ProductService = require('./product-service');
 const OrderService = require('./orders-service');
+const ArticlesService = require('./articles-service');
 
 const SERVICES = Symbol('services');
 
@@ -28,6 +29,10 @@ module.exports = class ServiceManager {
 
   get orderService() {
     return this.getService('order', () => new OrderService(this));
+  }
+
+  get articlesService() {
+    return this.getService('artciles', () => new ArticlesService(this));
   }
 
   async flush() {
