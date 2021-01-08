@@ -20,17 +20,7 @@ module.exports = ({ serviceManager }) => {
   });
 
   router.put('/{id}', async ({ params, bodyParsed }) => {
-    const { id } = params;
-
-    if (id !== bodyParsed.id) {
-      throw {
-        name: 'UnprocessableEntityError',
-        message: 'O id do recurso não é o mesmo do enviado na requisição',
-      };
-    }
-
-    const data = await service.update(params.id, bodyParsed);
-
+    const data = await service.update(params.id, { ...bodyParsed, id: params.id });
     return response(200, data);
   });
 

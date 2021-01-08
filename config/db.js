@@ -6,7 +6,7 @@ const connection = knex(knexConfig);
 module.exports = {
   connection,
   createConnection: () => {
-    if (process.env.APP_DATABASE_HOST) knex(knexConfig);
+    if (process.env.APP_DATABASE_HOST) return knex(knexConfig);
     return null;
   },
 };
