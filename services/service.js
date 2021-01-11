@@ -35,7 +35,7 @@ module.exports = class Service {
     if (!data) return data;
 
     if (Array.isArray(data)) {
-      return Promise.all(data.map(this.prepareResultObject));
+      return Promise.all(data.map((item) => this.prepareResultObject(item)));
     }
 
     delete data.createdAt;
