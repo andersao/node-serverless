@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "08508242-0a4a-4216-abed-6dc5896d176b",
+		"_postman_id": "41c83f1c-8b03-4412-b576-66d271a73794",
 		"name": "Sample API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -120,6 +120,199 @@
 							],
 							"path": [
 								"products",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1b95408d-d901-4917-8dba-3b82cfd4e685"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Articles",
+			"item": [
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Ford saiu do país\",\n    \"content\": \"Vai quebrar tudo\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Batch Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"title\": \"Ford saiu do país\",\n        \"content\": \"Vai quebrar tudo\"\n    }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles/batch",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles",
+								"batch"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Batch Get",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles/batch/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles",
+								"batch",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "8c2f0e82-af51-4541-a529-1655d144fd0a"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete by id",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1b95408d-d901-4917-8dba-3b82cfd4e685"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update by id",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nome\": \"Lucas\",\n    \"idade\": 26\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"articles",
 								":id"
 							],
 							"variable": [
