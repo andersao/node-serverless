@@ -14,6 +14,17 @@ module.exports = ({ serviceManager }) => {
     return response(201, data);
   });
 
+  router.post('/batch', async ({ bodyParsed }) => {
+    const data = await service.queueBatch(bodyParsed);
+    return response(202, data);
+  });
+
+  router.get('/batch/{id}', async ({ params }) => {
+    const { id } = params;
+    const data = await service.getBatch(id);
+    return response(200, data);
+  });
+
   router.get('/{id}', async ({ params }) => {
     const entity = await service.findById(params.id);
     return !entity ? response404('Article não localizado') : entity;
@@ -29,6 +40,7 @@ module.exports = ({ serviceManager }) => {
     await service.destroy(id);
     return response(204);
   });
+
 
   return router;
 };
