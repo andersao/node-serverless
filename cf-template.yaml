@@ -30,7 +30,7 @@ Resources:
         PassthroughBehavior: WHEN_NO_MATCH
         TimeoutInMillis: 29000
         Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaApiService.Arn}/invocations'
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaLambdaApiService.Arn}/invocations'
       OperationName: 'lambda'
       ResourceId: !Ref ApiGatewayResource
       RestApiId: !Ref ApiGatewayRestApi
@@ -199,7 +199,7 @@ Resources:
       ${VPC_CONFIG}
       Environment:
         Variables:
-          NewVersion: !Ref ApiService.Version
+          NewVersion: !Ref LambdaApiService.Version
           NODE_ENV: "production"
           APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
           APP_DATABASE_USER: '${APP_DATABASE_USER}'
@@ -214,7 +214,7 @@ Resources:
             - Effect: 'Allow'
               Action:
                 - 'lambda:InvokeFunction'
-              Resource: !Ref ApiService.Version
+              Resource: !Ref LambdaApiService.Version
             - Effect: Allow
               Action:
                 - ec2:DescribeVpcs
@@ -232,9 +232,9 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: Resource
-          Value: !Sub '${ApiService}:live'
+          Value: !Sub '${LambdaApiService}:live'
         - Name: FunctionName
-          Value: !Ref ApiService
+          Value: !Ref LambdaApiService
       EvaluationPeriods: 3
       MetricName: Errors
       Namespace: AWS/Lambda
@@ -253,9 +253,9 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: Resource
-          Value: !Ref ApiService.Version
+          Value: !Ref LambdaApiService.Version
         - Name: FunctionName
-          Value: !Ref ApiService
+          Value: !Ref LambdaApiService
       EvaluationPeriods: 3
       MetricName: Errors
       Namespace: AWS/Lambda
@@ -270,8 +270,8 @@ Resources:
   ApiLambdaPermission:
       Type: AWS::Lambda::Permission
       DependsOn:
-        - ApiService
+        - LambdaApiService
       Properties:
         Action: lambda:InvokeFunction
-        FunctionName: !Ref ApiService
+        FunctionName: !Ref LambdaApiService
         Principal: apigateway.amazonaws.com
