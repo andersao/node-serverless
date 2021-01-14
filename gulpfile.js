@@ -85,7 +85,7 @@ function prepareCloudFormationPackage(srcFile, destFile, packagedFile) {
   fs.writeFileSync(`dist/tmp/${destFile}`, content);
   return src('dist/tmp').pipe(
     shell(
-      `aws cloudformation package --template-file dist/tmp/${destFile} --output-template-file dist/tmp/${packagedFile} --s3-bucket ${process.env.DEPLOYMENT_BUCKET || 'node-deploy'}`,
+      `aws cloudformation package --template-file dist/tmp/${destFile} --output-template-file dist/tmp/${packagedFile} --s3-bucket ${process.env.DEPLOYMENT_BUCKET || 'cm-dev-deploy'}`,
     ),
   );
 }
