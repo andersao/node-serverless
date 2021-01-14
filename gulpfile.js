@@ -95,7 +95,7 @@ function prepareCloudFormationService() {
 }
 
 exports.prepareCloudFormation = series(
-  series(reset, setTestEnv, runTest),
+  series(reset, setTestEnv),
   series(prepareDist, prepareModules),
   parallel(prepareCloudFormationService),
 );
