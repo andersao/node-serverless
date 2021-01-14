@@ -2,12 +2,71 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Node Service Deployment
 Resources:
-  SampleNodeService:
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: Api Gateway
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Name: WKP-${APP_NAME}-API
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: 'lambda'
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt ApiGatewayIamRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaApiService.Arn}/invocations'
+      OperationName: 'lambda'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      Description: Lambda API Stage v1
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: 'v1'
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId: !Ref ApiGatewayRestApi
+  BatchDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: WKP-Batch-${APP_NAME}-dlq
+      MessageRetentionPeriod: 1209600
+  BatchDispatcherQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: WKP-Batch-${APP_NAME}
+      DelaySeconds: 0
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 345600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BatchDeadLetterQueue.Arn
+        maxReceiveCount: 30
+  LambdaApiService:
     Type: AWS::Serverless::Function
     Properties:
       Handler: index.handler
-      FunctionName: SampleNodeService
-      Role: arn:aws:iam::901194531837:role/service-role/node-lambda-role
+      FunctionName: WKP-${APP_NAME}
       Runtime: nodejs12.x
       AutoPublishAlias: live
       MemorySize: 256
@@ -16,20 +75,18 @@ Resources:
       Environment:
         Variables:
           NODE_ENV: "production"
-          APP_DEBUG: '${APP_DEBUG}'
-          APP_SECRET: '${APP_SECRET}'
-          API_PREFIX: '${API_PREFIX}'
-          DATABASE_HOST: '${DATABASE_HOST}'
-          DATABASE_USER: '${DATABASE_USER}'
-          DATABASE_PASSWORD: '${DATABASE_PASSWORD}'
-          DATABASE_NAME: '${DATABASE_NAME}'
+          APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
+          APP_DATABASE_USER: '${APP_DATABASE_USER}'
+          APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
+          BATCH_BUCKET: '${BATCH_BUCKET}'
+          BATCH_QUEUE_URL: '${BATCH_QUEUE_URL}'
       DeploymentPreference:
         Type: AllAtOnce
         Alarms:
           - !Ref AliasErrorMetricGreaterThanZeroAlarm
           - !Ref LatestVersionErrorMetricGreaterThanZeroAlarm
         Hooks:
-          PreTraffic: !Ref SampleNodeServicePreTrafficHook
+          PreTraffic: !Ref ApiServicePreTrafficHook
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -51,11 +108,89 @@ Resources:
                 - ec2:DescribeNetworkInterfaces
                 - ec2:DetachNetworkInterface
               Resource: '*'
-  SampleNodeServicePreTrafficHook:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource:
+                - arn:aws:s3:::workshop-aws-cm/*
+                - arn:aws:s3:::workshop-batches/*
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+                - sqs:SendMessageBatch
+              Resource:
+                - !GetAtt BatchDispatcherQueue.Arn
+  LambdaBatchService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: processor-index.handler
+      FunctionName: WKP-${APP_NAME}-Batch
+      Runtime: nodejs12.x
+      AutoPublishAlias: live
+      MemorySize: 256
+      Timeout: 180
+      ${VPC_CONFIG}
+      Environment:
+        Variables:
+          NODE_ENV: "production"
+          APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
+          APP_DATABASE_USER: '${APP_DATABASE_USER}'
+          APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
+          BATCH_BUCKET: '${BATCH_BUCKET}'
+          BATCH_QUEUE_URL: '${BATCH_QUEUE_URL}'
+      DeploymentPreference:
+        Type: AllAtOnce
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SAMPLE-*:*'
+            - Effect: Allow
+              Action:
+                - ec2:DescribeVpcs
+                - ec2:DescribeRegions
+                - ec2:DescribeInstances
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DetachNetworkInterface
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource:
+                - arn:aws:s3:::workshop-aws-cm/*
+                - arn:aws:s3:::workshop-batches/*
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:DeleteMessageBatch
+                - sqs:GetQueueAttributes
+              Resource:
+                - !GetAtt BatchDispatcherQueue.Arn
+  LambdaBatchServiceEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt LambdaBatchService.Arn
+      FunctionName: !GetAtt BatchDispatcherQueue.Arn
+  ApiServicePreTrafficHook:
     Type: AWS::Serverless::Function
     Properties:
       Handler: pre-traffic-hook.handler
-      FunctionName:  CodeDeployHook_SampleNodeService_PreTrafficHook
+      FunctionName:  CodeDeployHook_ApiService_PreTrafficHook
       DeploymentPreference:
         Enabled: false
       Runtime: nodejs12.x
@@ -64,12 +199,11 @@ Resources:
       ${VPC_CONFIG}
       Environment:
         Variables:
-          NewVersion: !Ref SampleNodeService.Version
-          NODE_ENV: 'production'
-          DATABASE_HOST: '${DATABASE_HOST}'
-          DATABASE_USER: '${DATABASE_USER}'
-          DATABASE_PASSWORD: '${DATABASE_PASSWORD}'
-          DATABASE_NAME: '${DATABASE_NAME}'
+          NewVersion: !Ref ApiService.Version
+          NODE_ENV: "production"
+          APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
+          APP_DATABASE_USER: '${APP_DATABASE_USER}'
+          APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -80,7 +214,7 @@ Resources:
             - Effect: 'Allow'
               Action:
                 - 'lambda:InvokeFunction'
-              Resource: !Ref SampleNodeService.Version
+              Resource: !Ref ApiService.Version
             - Effect: Allow
               Action:
                 - ec2:DescribeVpcs
@@ -94,13 +228,13 @@ Resources:
   AliasErrorMetricGreaterThanZeroAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
-      AlarmName: SampleNodeService-AliasError
+      AlarmName: ApiService-AliasError
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: Resource
-          Value: !Sub '${SampleNodeService}:live'
+          Value: !Sub '${ApiService}:live'
         - Name: FunctionName
-          Value: !Ref SampleNodeService
+          Value: !Ref ApiService
       EvaluationPeriods: 3
       MetricName: Errors
       Namespace: AWS/Lambda
@@ -115,13 +249,13 @@ Resources:
   LatestVersionErrorMetricGreaterThanZeroAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
-      AlarmName: SampleNodeService-LatestError
+      AlarmName: ApiService-LatestError
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: Resource
-          Value: !Ref SampleNodeService.Version
+          Value: !Ref ApiService.Version
         - Name: FunctionName
-          Value: !Ref SampleNodeService
+          Value: !Ref ApiService
       EvaluationPeriods: 3
       MetricName: Errors
       Namespace: AWS/Lambda
@@ -133,11 +267,11 @@ Resources:
       Period: 60
       Statistic: Sum
       Threshold: 0
-  varejofacilAdminLambdaPermission:
+  ApiLambdaPermission:
       Type: AWS::Lambda::Permission
       DependsOn:
-        - SampleNodeService
+        - ApiService
       Properties:
         Action: lambda:InvokeFunction
-        FunctionName: !Ref SampleNodeService
+        FunctionName: !Ref ApiService
         Principal: apigateway.amazonaws.com

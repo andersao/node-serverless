@@ -33,13 +33,16 @@ function prepareModules() {
 }
 
 function replaceEnvVars(content) {
+  content = content.replace(/\$\{APP_NAME\}/g, process.env.APP_NAME || 'Sample');
   content = content.replace(/\$\{API_PREFIX\}/g, process.env.API_PREFIX);
   content = content.replace(/\$\{APP_DEBUG\}/g, process.env.APP_DEBUG);
   content = content.replace(/\$\{APP_SECRET\}/g, process.env.APP_SECRET);
-  content = content.replace(/\$\{DATABASE_HOST\}/g, process.env.DATABASE_HOST);
-  content = content.replace(/\$\{DATABASE_USER\}/g, process.env.DATABASE_USER);
-  content = content.replace(/\$\{DATABASE_PASSWORD\}/g, process.env.DATABASE_PASSWORD);
-  content = content.replace(/\$\{DATABASE_NAME\}/g, process.env.DATABASE_NAME);
+  content = content.replace(/\$\{APP_DATABASE_HOST\}/g, process.env.APP_DATABASE_HOST);
+  content = content.replace(/\$\{APP_DATABASE_USER\}/g, process.env.APP_DATABASE_USER);
+  content = content.replace(/\$\{APP_DATABASE_PASSWORD\}/g, process.env.APP_DATABASE_PASSWORD);
+  content = content.replace(/\$\{APP_DATABASE_NAME\}/g, process.env.APP_DATABASE_NAME);
+  content = content.replace(/\$\{BATCH_BUCKET\}/g, process.env.BATCH_BUCKET);
+  content = content.replace(/\$\{BATCH_QUEUE_URL\}/g, process.env.BATCH_QUEUE_URL);
 
   let VPC_SUBNET_IDS = null;
   let VPC_SECURITY_GROUP_IDS = null;
