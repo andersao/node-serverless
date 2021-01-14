@@ -10,7 +10,7 @@ Resources:
       EndpointConfiguration:
         Types:
           - EDGE
-      Name: WKP-${APP_NAME}-API
+      Name: WKS-${APP_NAME}-API
   ApiGatewayResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -50,12 +50,12 @@ Resources:
   BatchDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: WKP-Batch-${APP_NAME}-dlq
+      QueueName: WKS-Batch-${APP_NAME}-dlq
       MessageRetentionPeriod: 1209600
   BatchDispatcherQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: WKP-Batch-${APP_NAME}
+      QueueName: WKS-Batch-${APP_NAME}
       DelaySeconds: 0
       VisibilityTimeout: 120
       MessageRetentionPeriod: 345600
@@ -66,7 +66,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: index.handler
-      FunctionName: WKP-${APP_NAME}
+      FunctionName: WKS-${APP_NAME}
       Runtime: nodejs12.x
       AutoPublishAlias: live
       MemorySize: 256
@@ -126,7 +126,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: processor-index.handler
-      FunctionName: WKP-${APP_NAME}-Batch
+      FunctionName: WKS-${APP_NAME}-Batch
       Runtime: nodejs12.x
       AutoPublishAlias: live
       MemorySize: 256
