@@ -92,7 +92,7 @@ module.exports = class ArticlesService extends Service {
         const articlesBatches = this.queryBuilder('articles_batches').transacting(transaction);
         await transaction.raw(
           '? ON DUPLICATE KEY UPDATE title=values(title), content=values(content) ',
-          [articles.insert({id: uuid(), ...data)]
+          [articles.insert({id: uuid(), ...data})]
         );
         await articlesBatches.where({ id }).update({
           status: 'FINISHED'
