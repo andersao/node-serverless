@@ -43,7 +43,7 @@ Resources:
       StageName: 'v1'
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: ApiGatewayMethod
+    DependsOn: ApiGatewayMethodAny
     Properties:
       Description: Lambda API Deployment
       RestApiId: !Ref ApiGatewayRestApi
