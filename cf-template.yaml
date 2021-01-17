@@ -80,7 +80,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: WKS-Batch-${APP_NAME}
-      DelaySeconds: 0
+      DelaySeconds: 20
       VisibilityTimeout: 60
       MessageRetentionPeriod: 345600
       RedrivePolicy:
