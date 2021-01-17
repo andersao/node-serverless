@@ -101,7 +101,7 @@ Resources:
           APP_DATABASE_USER: '${APP_DATABASE_USER}'
           APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
           BATCH_BUCKET: '${BATCH_BUCKET}'
-          BATCH_QUEUE_URL: !Ref BatchDeadLetterQueue.Url
+          BATCH_QUEUE_URL: !Ref BatchDeadLetterQueue
       DeploymentPreference:
         Type: AllAtOnce
         Hooks:
