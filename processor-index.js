@@ -53,10 +53,10 @@ const handler = async (event) => {
     const filterSQS = (rec) => rec.eventSource === 'aws:sqs';
     const records = event.Records.filter(filterSQS);
     await processRecords(records);
+    return true;
   } catch (error) {
     console.log(error);
-  } finally {
-    return true;
+    return false;
   }
 };
 
