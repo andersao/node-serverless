@@ -79,7 +79,7 @@ Resources:
     Properties:
       QueueName: WKS-Batch-${APP_NAME}
       DelaySeconds: 0
-      VisibilityTimeout: 120
+      VisibilityTimeout: 60
       MessageRetentionPeriod: 345600
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt BatchDeadLetterQueue.Arn
@@ -92,7 +92,7 @@ Resources:
       Runtime: nodejs12.x
       AutoPublishAlias: live
       MemorySize: 256
-      Timeout: 180
+      Timeout: 30
       ${VPC_CONFIG}
       Environment:
         Variables:
@@ -104,9 +104,6 @@ Resources:
           BATCH_QUEUE_URL: '${BATCH_QUEUE_URL}'
       DeploymentPreference:
         Type: AllAtOnce
-        Alarms:
-          - !Ref AliasErrorMetricGreaterThanZeroAlarm
-          - !Ref LatestVersionErrorMetricGreaterThanZeroAlarm
         Hooks:
           PreTraffic: !Ref ApiServicePreTrafficHook
       Policies:
@@ -152,7 +149,7 @@ Resources:
       Runtime: nodejs12.x
       AutoPublishAlias: live
       MemorySize: 256
-      Timeout: 180
+      Timeout: 30
       ${VPC_CONFIG}
       Environment:
         Variables:
@@ -247,48 +244,6 @@ Resources:
                 - ec2:DescribeNetworkInterfaces
                 - ec2:DetachNetworkInterface
               Resource: '*'
-  AliasErrorMetricGreaterThanZeroAlarm:
-    Type: 'AWS::CloudWatch::Alarm'
-    Properties:
-      AlarmName: ApiService-AliasError
-      ComparisonOperator: GreaterThanThreshold
-      Dimensions:
-        - Name: Resource
-          Value: !Sub '${LambdaApiService}:live'
-        - Name: FunctionName
-          Value: !Ref LambdaApiService
-      EvaluationPeriods: 3
-      MetricName: Errors
-      Namespace: AWS/Lambda
-      TreatMissingData: ignore
-      AlarmActions:
-        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
-      OKActions:
-        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
-      Period: 60
-      Statistic: Sum
-      Threshold: 0
-  LatestVersionErrorMetricGreaterThanZeroAlarm:
-    Type: 'AWS::CloudWatch::Alarm'
-    Properties:
-      AlarmName: ApiService-LatestError
-      ComparisonOperator: GreaterThanThreshold
-      Dimensions:
-        - Name: Resource
-          Value: !Ref LambdaApiService.Version
-        - Name: FunctionName
-          Value: !Ref LambdaApiService
-      EvaluationPeriods: 3
-      MetricName: Errors
-      Namespace: AWS/Lambda
-      TreatMissingData: ignore
-      AlarmActions:
-        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
-      OKActions:
-        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SAMPLE-SNS-TOPIC'
-      Period: 60
-      Statistic: Sum
-      Threshold: 0
   ApiLambdaPermission:
       Type: AWS::Lambda::Permission
       DependsOn:
