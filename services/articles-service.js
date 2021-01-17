@@ -90,9 +90,11 @@ module.exports = class ArticlesService extends Service {
       return await this.connection.transaction(async transaction => {
         const articles = this.queryBuilder('articles').transacting(transaction);
         const articlesBatches = this.queryBuilder('articles_batches').transacting(transaction);
+        const values = data.map((val) => ({id: uuid(), ...val}));
+
         await transaction.raw(
           '? ON DUPLICATE KEY UPDATE title=values(title), content=values(content) ',
-          [articles.insert({id: uuid(), ...data})]
+          [articles.insert(values)]
         );
         await articlesBatches.where({ id }).update({
           status: 'FINISHED'
