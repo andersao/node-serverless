@@ -101,8 +101,9 @@ Resources:
         Variables:
           NODE_ENV: "production"
           APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
-          APP_DATABASE_USER: '${APP_DATABASE_USER}'
           APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
+          APP_DATABASE_USER: '${APP_DATABASE_USER}'
+          APP_DATABASE_PASSWORD: '${APP_DATABASE_PASSWORD}'
           BATCH_BUCKET: '${BATCH_BUCKET}'
           BATCH_QUEUE_URL: !Ref BatchDispatcherQueue
       DeploymentPreference:
@@ -158,8 +159,9 @@ Resources:
         Variables:
           NODE_ENV: "production"
           APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
-          APP_DATABASE_USER: '${APP_DATABASE_USER}'
           APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
+          APP_DATABASE_USER: '${APP_DATABASE_USER}'
+          APP_DATABASE_PASSWORD: '${APP_DATABASE_PASSWORD}'
           BATCH_BUCKET: '${BATCH_BUCKET}'
           BATCH_QUEUE_URL: '${BATCH_QUEUE_URL}'
       DeploymentPreference:
@@ -224,8 +226,9 @@ Resources:
           NewVersion: !Ref LambdaApiService.Version
           NODE_ENV: "production"
           APP_DATABASE_HOST: '${APP_DATABASE_HOST}'
-          APP_DATABASE_USER: '${APP_DATABASE_USER}'
           APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
+          APP_DATABASE_USER: '${APP_DATABASE_USER}'
+          APP_DATABASE_PASSWORD: '${APP_DATABASE_PASSWORD}'
       Policies:
         - Version: '2012-10-17'
           Statement:
