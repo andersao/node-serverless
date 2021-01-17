@@ -206,8 +206,8 @@ Resources:
     Properties:
       BatchSize: 10
       Enabled: true
-      EventSourceArn: !GetAtt LambdaBatchService.Arn
-      FunctionName: !GetAtt BatchDispatcherQueue.Arn
+      EventSourceArn: !GetAtt BatchDispatcherQueue.Arn
+      FunctionName: !GetAtt LambdaBatchService.Arn
   ApiServicePreTrafficHook:
     Type: AWS::Serverless::Function
     Properties:
