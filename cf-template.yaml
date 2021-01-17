@@ -90,7 +90,6 @@ Resources:
       Handler: index.handler
       FunctionName: WKS-${APP_NAME}
       Runtime: nodejs12.x
-      AutoPublishAlias: live
       MemorySize: 256
       Timeout: 30
       ${VPC_CONFIG}
@@ -101,7 +100,7 @@ Resources:
           APP_DATABASE_USER: '${APP_DATABASE_USER}'
           APP_DATABASE_NAME: '${APP_DATABASE_NAME}'
           BATCH_BUCKET: '${BATCH_BUCKET}'
-          BATCH_QUEUE_URL: !Ref BatchDeadLetterQueue
+          BATCH_QUEUE_URL: !Ref BatchDispatcherQueue
       DeploymentPreference:
         Type: AllAtOnce
         Hooks:
@@ -147,7 +146,6 @@ Resources:
       Handler: processor-index.handler
       FunctionName: WKS-${APP_NAME}-Batch
       Runtime: nodejs12.x
-      AutoPublishAlias: live
       MemorySize: 256
       Timeout: 30
       ${VPC_CONFIG}
