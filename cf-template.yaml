@@ -4,6 +4,7 @@ Description: Node Service Deployment
 Resources:
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
+    DependsOn: LambdaApiService
     Properties:
       ApiKeySourceType: HEADER
       Description: Api Gateway
@@ -19,6 +20,7 @@ Resources:
       RestApiId: !Ref ApiGatewayRestApi
   ApiGatewayMethodAny:
     Type: AWS::ApiGateway::Method
+    DependsOn: LambdaApiService
     Properties:
       ApiKeyRequired: false
       AuthorizationType: NONE
@@ -86,6 +88,7 @@ Resources:
         maxReceiveCount: 30
   LambdaApiService:
     Type: AWS::Serverless::Function
+    DependsOn: BatchDispatcherQueue
     Properties:
       Handler: index.handler
       FunctionName: WKS-${APP_NAME}
