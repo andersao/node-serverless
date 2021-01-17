@@ -209,7 +209,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: pre-traffic-hook.handler
-      FunctionName:  CodeDeployHook_ApiService_PreTrafficHook
+      FunctionName:  CodeDeployHook_${APP_NAME}_ApiService_PreTrafficHook
       DeploymentPreference:
         Enabled: false
       Runtime: nodejs12.x
