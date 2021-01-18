@@ -1,0 +1,320 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Node Service Deployment
+Parameters:
+  AppName:
+    Type: String
+    Default: Sample
+    Description: Informe o nome da sua stack
+  AppDatabaseHost:
+    Type: String
+    Default: localhost
+    Description: Host do Banco de dados
+  AppDatabaseUser:
+    Type: String
+    Default: workshop
+    Description: Usuário do banco de dados
+  AppDatabasePassword:
+    Type: String
+    Default: workshop
+    Description: Senha de conexão com o banco de dados
+  AppDatabaseName:
+    Type: String
+    Default: workshop
+    Description: Nome do banco de dados
+  BatchBucketName:
+    Type: String
+    Default: workshop-batches
+    Description: Nome do bucket de bacth
+  VpcId:
+    Type: String
+    Default: vpc-0445d998ad9f9d97f
+  VpcSubnetA:
+    Type: String
+    Default: subnet-043586ac58e8316a6
+  VpcSubnetB:
+    Type: String
+    Default: subnet-075010fb9fb8e9b4e
+  VpcSubnetC:
+    Type: String
+    Default: subnet-07a5e0cf370ac01c1
+  VpcSecurityGroup:
+    Type: String
+    Default: sg-0d7eace030515ed60
+Resources:
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    DependsOn: LambdaApiService
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: Api Gateway
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Name: !Join ['-', ['WKS', !Ref 'AppName', 'API']]
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: '{proxy+}'
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodAny:
+    Type: AWS::ApiGateway::Method
+    DependsOn: LambdaApiService
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: ANY
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt ApiGatewayIamRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaApiService.Arn}/invocations'
+      OperationName: 'lambda'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      Description: Lambda API Stage v1
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: 'v1'
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethodAny
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: 'Allow'
+            Principal:
+              Service:
+                - 'apigateway.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+        - PolicyName: LambdaAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt LambdaApiService.Arn
+  BatchDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join ['-', ['WKS', 'Batch', !Ref 'AppName', 'dlq']]
+      MessageRetentionPeriod: 1209600
+  BatchDispatcherQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join ['-', ['WKS', 'Batch', !Ref 'AppName']]
+      DelaySeconds: 20
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 345600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BatchDeadLetterQueue.Arn
+        maxReceiveCount: 30
+  LambdaApiService:
+    Type: AWS::Serverless::Function
+    DependsOn: BatchDispatcherQueue
+    Properties:
+      Handler: index.handler
+      FunctionName: !Join ['-', ['WKS', !Ref 'AppName', 'Service']]
+      Runtime: nodejs12.x
+      AutoPublishAlias: live
+      MemorySize: 256
+      Timeout: 30
+      CodeUri: s3://cm-dev-deploy/3003d60003d6366e7aaf496086a009f1
+      VpcConfig:
+        SecurityGroupIds:
+        - !Ref 'VpcSecurityGroup'
+        SubnetIds:
+        - !Ref 'VpcSubnetA'
+        - !Ref 'VpcSubnetB'
+        - !Ref 'VpcSubnetC'
+      Environment:
+        Variables:
+          NODE_ENV: "production"
+          APP_DATABASE_HOST: !Ref 'AppDatabaseHost'
+          APP_DATABASE_NAME: !Ref 'AppDatabaseName'
+          APP_DATABASE_USER: !Ref 'AppDatabaseUser'
+          APP_DATABASE_PASSWORD: !Ref 'AppDatabasePassword'
+          BATCH_BUCKET: !Ref 'BatchBucketName'
+          BATCH_QUEUE_URL: !Ref BatchDispatcherQueue
+      DeploymentPreference:
+        Type: AllAtOnce
+        Hooks:
+          PreTraffic: !Ref ApiServicePreTrafficHook
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SAMPLE-*:*'
+            - Effect: Allow
+              Action:
+                - ec2:DescribeVpcs
+                - ec2:DescribeRegions
+                - ec2:DescribeInstances
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DetachNetworkInterface
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource:
+                - arn:aws:s3:::workshop-aws-cm/*
+                - arn:aws:s3:::workshop-batches/*
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+                - sqs:SendMessageBatch
+              Resource:
+                - !GetAtt BatchDispatcherQueue.Arn
+  LambdaBatchService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: processor-index.handler
+      FunctionName: !Join ['-', ['WKS', !Ref 'AppName', 'Batch']]
+      Runtime: nodejs12.x
+      AutoPublishAlias: live
+      MemorySize: 256
+      Timeout: 30
+      CodeUri: s3://cm-dev-deploy/3003d60003d6366e7aaf496086a009f1
+      VpcConfig:
+        SecurityGroupIds:
+        - !Ref 'VpcSecurityGroup'
+        SubnetIds:
+        - !Ref 'VpcSubnetA'
+        - !Ref 'VpcSubnetB'
+        - !Ref 'VpcSubnetC'
+      Environment:
+        Variables:
+          NODE_ENV: "production"
+          APP_DATABASE_HOST: !Ref 'AppDatabaseHost'
+          APP_DATABASE_NAME: !Ref 'AppDatabaseName'
+          APP_DATABASE_USER: !Ref 'AppDatabaseUser'
+          APP_DATABASE_PASSWORD: !Ref 'AppDatabasePassword'
+          BATCH_BUCKET: !Ref 'BatchBucketName'
+      DeploymentPreference:
+        Type: AllAtOnce
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SAMPLE-*:*'
+            - Effect: Allow
+              Action:
+                - ec2:DescribeVpcs
+                - ec2:DescribeRegions
+                - ec2:DescribeInstances
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DetachNetworkInterface
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource:
+                - arn:aws:s3:::workshop-aws-cm/*
+                - arn:aws:s3:::workshop-batches/*
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:DeleteMessageBatch
+                - sqs:GetQueueAttributes
+              Resource:
+                - !GetAtt BatchDispatcherQueue.Arn
+  LambdaBatchServiceEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt BatchDispatcherQueue.Arn
+      FunctionName: !GetAtt LambdaBatchService.Arn
+  ApiServicePreTrafficHook:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: pre-traffic-hook.handler
+      FunctionName: !Join ['_', ['CodeDeployHook', !Ref 'AppName', 'ApiService_PreTrafficHook']]
+      DeploymentPreference:
+        Enabled: false
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Timeout: 60
+      CodeUri: s3://cm-dev-deploy/3003d60003d6366e7aaf496086a009f1
+      VpcConfig:
+        SecurityGroupIds:
+        - !Ref 'VpcSecurityGroup'
+        SubnetIds:
+        - !Ref 'VpcSubnetA'
+        - !Ref 'VpcSubnetB'
+        - !Ref 'VpcSubnetC'
+      Environment:
+        Variables:
+          NewVersion: !Ref LambdaApiService.Version
+          NODE_ENV: "production"
+          APP_DATABASE_HOST: !Ref 'AppDatabaseHost'
+          APP_DATABASE_NAME: !Ref 'AppDatabaseName'
+          APP_DATABASE_USER: !Ref 'AppDatabaseUser'
+          APP_DATABASE_PASSWORD: !Ref 'AppDatabasePassword'
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'codedeploy:PutLifecycleEventHookExecutionStatus'
+              Resource: !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*'
+            - Effect: 'Allow'
+              Action:
+                - 'lambda:InvokeFunction'
+              Resource: !Ref LambdaApiService.Version
+            - Effect: Allow
+              Action:
+                - ec2:DescribeVpcs
+                - ec2:DescribeRegions
+                - ec2:DescribeInstances
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DetachNetworkInterface
+              Resource: '*'
+  ApiLambdaPermission:
+      Type: AWS::Lambda::Permission
+      DependsOn:
+        - LambdaApiService
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref LambdaApiService
+        Principal: apigateway.amazonaws.com
