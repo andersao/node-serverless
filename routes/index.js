@@ -14,5 +14,13 @@ module.exports = (app) => {
   router.merge(ordersRouter(app.context));
   router.merge(articlesRouter(app.context));
   router.merge(swaggerRouter(app.context));
+  
+  router.get('/deployed', () => {
+      return {
+        deployed: true,
+        date: new Date()
+      }
+  });
+  
   return router;
 };
