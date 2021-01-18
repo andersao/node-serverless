@@ -1,0 +1,299 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Node Service Deployment
+Resources:
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    DependsOn: LambdaApiService
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: Api Gateway
+      EndpointConfiguration:
+        Types:
+        - EDGE
+      Name: WKS-Anderson-API
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: '{proxy+}'
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayMethodAny:
+    Type: AWS::ApiGateway::Method
+    DependsOn: LambdaApiService
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: ANY
+      Integration:
+        ConnectionType: INTERNET
+        Credentials:
+          Fn::GetAtt:
+          - ApiGatewayIamRole
+          - Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaApiService.Arn}/invocations
+      OperationName: lambda
+      ResourceId:
+        Ref: ApiGatewayResource
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId:
+        Ref: ApiGatewayDeployment
+      Description: Lambda API Stage v1
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StageName: v1
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethodAny
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: ''
+          Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: LambdaAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: lambda:*
+            Resource:
+              Fn::GetAtt:
+              - LambdaApiService
+              - Arn
+  BatchDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: WKS-Batch-Anderson-dlq
+      MessageRetentionPeriod: 1209600
+  BatchDispatcherQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: WKS-Batch-Anderson
+      DelaySeconds: 20
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 345600
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+          - BatchDeadLetterQueue
+          - Arn
+        maxReceiveCount: 30
+  LambdaApiService:
+    Type: AWS::Serverless::Function
+    DependsOn: BatchDispatcherQueue
+    Properties:
+      Handler: index.handler
+      FunctionName: WKS-Anderson
+      Runtime: nodejs12.x
+      AutoPublishAlias: live
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          NODE_ENV: production
+          APP_DATABASE_HOST: localhost
+          APP_DATABASE_NAME: workshop
+          APP_DATABASE_USER: workshop
+          APP_DATABASE_PASSWORD: workshop
+          BATCH_BUCKET: workshop-batches
+          BATCH_QUEUE_URL:
+            Ref: BatchDispatcherQueue
+      DeploymentPreference:
+        Type: AllAtOnce
+        Hooks:
+          PreTraffic:
+            Ref: ApiServicePreTrafficHook
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action: logs:CreateLogGroup
+          Resource:
+            Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+        - Effect: Allow
+          Action:
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Resource:
+            Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SAMPLE-*:*
+        - Effect: Allow
+          Action:
+          - ec2:DescribeVpcs
+          - ec2:DescribeRegions
+          - ec2:DescribeInstances
+          - ec2:CreateNetworkInterface
+          - ec2:DeleteNetworkInterface
+          - ec2:DescribeNetworkInterfaces
+          - ec2:DetachNetworkInterface
+          Resource: '*'
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          - s3:PutObject
+          - s3:PutObjectAcl
+          Resource:
+          - arn:aws:s3:::workshop-aws-cm/*
+          - arn:aws:s3:::workshop-batches/*
+        - Effect: Allow
+          Action:
+          - sqs:SendMessage
+          - sqs:SendMessageBatch
+          Resource:
+          - Fn::GetAtt:
+            - BatchDispatcherQueue
+            - Arn
+      CodeUri: s3://cm-dev-deploy/3003d60003d6366e7aaf496086a009f1
+  LambdaBatchService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: processor-index.handler
+      FunctionName: WKS-Anderson-Batch
+      Runtime: nodejs12.x
+      AutoPublishAlias: live
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          NODE_ENV: production
+          APP_DATABASE_HOST: localhost
+          APP_DATABASE_NAME: workshop
+          APP_DATABASE_USER: workshop
+          APP_DATABASE_PASSWORD: workshop
+          BATCH_BUCKET: workshop-batches
+          BATCH_QUEUE_URL: undefined
+      DeploymentPreference:
+        Type: AllAtOnce
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action: logs:CreateLogGroup
+          Resource:
+            Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+        - Effect: Allow
+          Action:
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Resource:
+            Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SAMPLE-*:*
+        - Effect: Allow
+          Action:
+          - ec2:DescribeVpcs
+          - ec2:DescribeRegions
+          - ec2:DescribeInstances
+          - ec2:CreateNetworkInterface
+          - ec2:DeleteNetworkInterface
+          - ec2:DescribeNetworkInterfaces
+          - ec2:DetachNetworkInterface
+          Resource: '*'
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          - s3:PutObject
+          - s3:PutObjectAcl
+          Resource:
+          - arn:aws:s3:::workshop-aws-cm/*
+          - arn:aws:s3:::workshop-batches/*
+        - Effect: Allow
+          Action:
+          - sqs:ReceiveMessage
+          - sqs:DeleteMessage
+          - sqs:DeleteMessageBatch
+          - sqs:GetQueueAttributes
+          Resource:
+          - Fn::GetAtt:
+            - BatchDispatcherQueue
+            - Arn
+      CodeUri: s3://cm-dev-deploy/3003d60003d6366e7aaf496086a009f1
+  LambdaBatchServiceEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn:
+        Fn::GetAtt:
+        - BatchDispatcherQueue
+        - Arn
+      FunctionName:
+        Fn::GetAtt:
+        - LambdaBatchService
+        - Arn
+  ApiServicePreTrafficHook:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: pre-traffic-hook.handler
+      FunctionName: CodeDeployHook_Anderson_ApiService_PreTrafficHook
+      DeploymentPreference:
+        Enabled: false
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Timeout: 60
+      Environment:
+        Variables:
+          NewVersion:
+            Ref: LambdaApiService.Version
+          NODE_ENV: production
+          APP_DATABASE_HOST: localhost
+          APP_DATABASE_NAME: workshop
+          APP_DATABASE_USER: workshop
+          APP_DATABASE_PASSWORD: workshop
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - codedeploy:PutLifecycleEventHookExecutionStatus
+          Resource:
+            Fn::Sub: arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*
+        - Effect: Allow
+          Action:
+          - lambda:InvokeFunction
+          Resource:
+            Ref: LambdaApiService.Version
+        - Effect: Allow
+          Action:
+          - ec2:DescribeVpcs
+          - ec2:DescribeRegions
+          - ec2:DescribeInstances
+          - ec2:CreateNetworkInterface
+          - ec2:DeleteNetworkInterface
+          - ec2:DescribeNetworkInterfaces
+          - ec2:DetachNetworkInterface
+          Resource: '*'
+      CodeUri: s3://cm-dev-deploy/3003d60003d6366e7aaf496086a009f1
+  ApiLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - LambdaApiService
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: LambdaApiService
+      Principal: apigateway.amazonaws.com
