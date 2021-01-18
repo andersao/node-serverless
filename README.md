@@ -1,5 +1,6 @@
 # Node ABL Scaffold
 
+# Faz o deploy!!!!
 
 ## Migrations
 
